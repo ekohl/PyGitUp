@@ -12,6 +12,7 @@ __all__ = ['GitUp']
 ###############################################################################
 
 # Python libs
+import argparse
 import codecs
 import errno
 import sys
@@ -36,7 +37,6 @@ except ImportError:  # pragma: no cover
 else:  # pragma: no cover
     NO_DISTRIBUTE = False
 
-import click
 import colorama
 from git import Repo, GitCmdObjectDB
 from termcolor import colored
@@ -615,21 +615,24 @@ Project URL: https://github.com/msiemens/PyGitUp
 '''
 
 
-@click.command(epilog=EPILOG)
-@click.option('-V', '--version', is_flag=True,
-              help='Show version (and if there is a newer version).')
-@click.option('-q', '--quiet', is_flag=True,
-              help='Be quiet, only print error messages.')
-@click.option('--no-fetch', '--no-f', is_flag=True,
-              help='Don\'t try to fetch from origin.')
-@click.option('-p', '--push/--no-push', default=None,
-              help='Push the changes after pulling successfully.')
-@click.help_option('-h', '--help')
-def run(version, quiet, no_fetch, push, **kwargs):  # pragma: no cover
+def run():  # pragma: no cover
     """
     A nicer `git pull`.
     """
-    if version:
+
+    parser = argparse.ArgumentParser(description="A nicer `git pull`.", epilog=EPILOG)
+    parser.add_argument('-V', '--version', action='store_true',
+                        help='Show version (and if there is a newer version).')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='Be quiet, only print error messages.')
+    parser.add_argument('--no-fetch', '--no-f', dest='fetch', action='store_false',
+                        help='Don\'t try to fetch from origin.')
+    parser.add_argument('-p', '--push', action='store_true',
+                        help='Push the changes after pulling successfully.')
+
+    args = parser.parse_args()
+
+    if args.version:
         if NO_DISTRIBUTE:
             print(colored('Please install \'git-up\' via pip in order to '
                           'get version information.', 'yellow'))
@@ -637,19 +640,13 @@ def run(version, quiet, no_fetch, push, **kwargs):  # pragma: no cover
             GitUp(sparse=True).version_info()
         return
 
-    if quiet:
+    if args.quiet:
         sys.stdout = StringIO()
 
     try:
         gitup = GitUp()
-
-        if push is not None:
-            gitup.settings['push.auto'] = push
-
-        # if arguments['--no-fetch'] or arguments['--no-f']:
-        if no_fetch:
-            gitup.should_fetch = False
-
+        gitup.settings['push.auto'] = args.push
+        gitup.should_fetch = args.fetch
     except GitError:
         sys.exit(1)  # Error in constructor
     else:
@@ -657,4 +654,4 @@ def run(version, quiet, no_fetch, push, **kwargs):  # pragma: no cover
 
 
 if __name__ == '__main__':  # pragma: no cover
-    run(help_option_names=['-h'])
+    run()
